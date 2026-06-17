@@ -1,8 +1,7 @@
 # Easy Prompting
 
-A safe scratchpad for writing AI chat prompts. Draft your prompt in a small
-window that stays open beside your chat, never lose it to a stray **Enter** or
-**Ctrl+C**, then copy it over when it's ready.
+A safe scratchpad for AI chat prompts. Draft in an open window, never lose a
+prompt to a stray **Enter** or **Ctrl+C**, then copy it.
 
 ## Why
 

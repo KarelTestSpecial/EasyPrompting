@@ -1,8 +1,7 @@
 # Easy Prompting
 
-A safe scratchpad for writing AI chat prompts. Draft your prompt in a small
-window that stays open beside your chat, never lose it to a stray **Enter** or
-**Ctrl+C**, then copy it over when it's ready. Nothing is ever sent from this
+A safe scratchpad for AI chat prompts. Draft in an open window, never lose a
+prompt to a stray **Enter** or **Ctrl+C**, then copy it. Nothing is ever sent from this
 window — Enter just makes a new line.
 
 A Manifest V3 Chrome extension.
@@ -15,7 +14,7 @@ A Manifest V3 Chrome extension.
 | `easyprompting/LEGAL/PRIVACY.md` | Privacy policy |
 | `easyprompting-1.0.zip` | Packaged build, ready for the Chrome Web Store |
 | `promo/` | Store promo assets + `make_promo.py` generator |
-| `STORE_LISTING.md` | Chrome Web Store listing copy (EN + NL) |
+| `STORE_LISTING.md` | Chrome Web Store listing copy |
 
 ## Features
 
