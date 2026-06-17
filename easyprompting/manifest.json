@@ -1,9 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "__MSG_extName__",
+  "name": "Easy Prompting",
   "version": "1.0",
-  "description": "__MSG_extDescription__",
-  "default_locale": "en",
+  "description": "A safe scratchpad for AI chat prompts. Draft in an open window, never lose a prompt to a stray Enter or Ctrl+C, then copy it.",
   "icons": {
     "16": "icon/ep_icon16x16.png",
     "48": "icon/ep_icon48x48.png",
@@ -18,7 +17,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "__MSG_tooltipOpenPad__",
+    "default_title": "Open Easy Prompting",
     "default_icon": {
       "16": "icon/ep_icon16x16.png",
       "48": "icon/ep_icon48x48.png"

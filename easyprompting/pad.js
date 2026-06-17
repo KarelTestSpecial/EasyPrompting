@@ -18,13 +18,10 @@ let fontSmaller, fontBigger, helpBtn, statusEl;
 let helpModal, helpClose;
 let statusTimeout = null;
 
-const t = (key, subs) => chrome.i18n.getMessage(key, subs) || key;
-
-document.addEventListener('DOMContentLoaded', init);
+// Removed t() functiondocument.addEventListener('DOMContentLoaded', init);
 
 async function init() {
     cacheDom();
-    localizeStatic();
     await loadState();
     renderTabs();
     loadActiveIntoPad();
@@ -49,34 +46,14 @@ function cacheDom() {
     helpClose = document.getElementById('help-close');
 }
 
-function localizeStatic() {
-    document.title = t('htmlPageTitle');
-    padArea.placeholder = t('padPlaceholder');
-    copyBtn.textContent = t('copyButton');
-    copyBtn.title = t('copyButtonTooltip');
-    clearBtn.textContent = t('clearButton');
-    clearBtn.title = t('clearButtonTooltip');
-    addTabBtn.title = t('addTabTooltip');
-    fontSmaller.title = t('fontSizeTooltip');
-    fontBigger.title = t('fontSizeTooltip');
-    helpBtn.title = t('helpButtonTooltip');
-
-    document.getElementById('help-title').textContent = t('helpModalTitle');
-    document.getElementById('hd-er').textContent = t('helpDescAltER');
-    document.getElementById('hd-19').textContent = t('helpDescAlt19');
-    document.getElementById('hd-arrows').textContent = t('helpDescArrows');
-    document.getElementById('help-tip').textContent = t('helpTipText');
-    document.getElementById('rename-hint').textContent = t('renameHint');
-    document.getElementById('sibling-note').textContent = t('siblingNote');
-}
-
+// localizeStatic removed
 async function loadState() {
     const stored = await chrome.storage.local.get(DEFAULTS);
     notes = Array.isArray(stored.notes) ? stored.notes : null;
     activeNoteId = stored.activeNoteId;
 
     if (!notes || notes.length === 0) {
-        notes = [{ id: 'default', title: t('defaultTabTitle'), content: '' }];
+        notes = [{ id: 'default', title: 'Prompt 1', content: '' }];
         activeNoteId = 'default';
         await persist();
     }
@@ -91,7 +68,7 @@ async function persist() {
     try {
         await chrome.storage.local.set({ notes, activeNoteId });
     } catch (e) {
-        showStatus(t('errorStorageFull'));
+        showStatus('Storage limit reached!');
     }
 }
 
@@ -105,13 +82,13 @@ function renderTabs() {
 
         const title = document.createElement('span');
         title.className = 'tab-title';
-        title.textContent = note.title || t('newTabTitle');
+        title.textContent = note.title || 'Prompt';
         tab.appendChild(title);
 
         const del = document.createElement('span');
         del.className = 'delete-tab';
         del.innerHTML = '&times;';
-        del.title = t('deleteTabTooltip');
+        del.title = 'Delete tab';
         del.onclick = (e) => { e.stopPropagation(); deleteTab(note.id); };
         tab.appendChild(del);
 
@@ -146,7 +123,7 @@ async function switchTab(id) {
 async function addTab() {
     syncActiveFromPad();
     const id = Date.now().toString();
-    notes.push({ id, title: `${t('newTabTitle')} ${notes.length + 1}`, content: '' });
+    notes.push({ id, title: `Prompt ${notes.length + 1}`, content: '' });
     activeNoteId = id;
     loadActiveIntoPad();
     renderTabs();
@@ -157,10 +134,10 @@ async function addTab() {
 
 async function deleteTab(id) {
     if (notes.length <= 1) {
-        showStatus(t('errorCannotDeleteLastTab'));
+        showStatus('Cannot delete the last tab.');
         return;
     }
-    if (!confirm(t('confirmDeleteTab'))) return;
+    if (!confirm('Delete this tab?')) return;
     notes = notes.filter(n => n.id !== id);
     if (activeNoteId === id) {
         activeNoteId = notes[0].id;
@@ -174,7 +151,7 @@ async function deleteTab(id) {
 function renameTab(id) {
     const note = notes.find(n => n.id === id);
     if (!note) return;
-    const title = prompt(t('promptRenameTab'), note.title);
+    const title = prompt('Enter new title:', note.title);
     if (title !== null && title.trim() !== '') {
         note.title = title.trim();
         renderTabs();
@@ -193,20 +170,20 @@ async function onInput() {
 async function copyCurrent() {
     try {
         await navigator.clipboard.writeText(padArea.value);
-        showStatus(t('copiedStatus'));
+        showStatus('Copied!');
     } catch (e) {
         // Fallback for environments without async clipboard.
         padArea.select();
         document.execCommand('copy');
         padArea.setSelectionRange(padArea.value.length, padArea.value.length);
-        showStatus(t('copiedStatus'));
+        showStatus('Copied!');
     }
     padArea.focus();
 }
 
 async function clearCurrent() {
     if (!padArea.value) return;
-    if (!confirm(t('confirmClear'))) return;
+    if (!confirm('Clear all text in this tab?')) return;
     padArea.value = '';
     syncActiveFromPad();
     updateCounter();
@@ -219,7 +196,7 @@ function updateCounter() {
     const text = padArea.value;
     const chars = text.length;
     const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-    counterEl.textContent = t('counterLabel', [String(words), String(chars)]);
+    counterEl.textContent = `${words} words · ${chars} chars`;
 }
 
 // --- Font size ---
