@@ -60,6 +60,9 @@ Everything is stored on your own device via chrome.storage and is never
 transmitted. No accounts, no tracking, no network requests.
 
 MORE FROM THIS DEVELOPER
+• Google AI Studio - File Reader — converts a Google AI Studio file into an easy-to-read text file.
+• MD Reader — a simple and fast way to read Markdown files directly in your browser.
+• Battery Percentage — keep track of your device's battery level right in your toolbar.
 • Very Practical Clock & Notepad — a clock, alarms and a richer multi-tab notepad.
 • NewTab Startpage Organizer Dashboard — turn every new tab into a tidy
   productivity dashboard. Use it alongside Easy Prompting for an extra
@@ -108,6 +111,9 @@ Alles wordt lokaal op je toestel bewaard via chrome.storage en wordt nooit
 verzonden. Geen accounts, geen tracking, geen netwerkverzoeken.
 
 MEER VAN DEZE ONTWIKKELAAR
+• Google AI Studio - File Reader — converteert een Google AI Studio bestand naar een eenvoudig leesbaar tekstbestand.
+• MD Reader — een snelle en simpele manier om Markdown-bestanden direct in je browser te bekijken.
+• Battery Percentage — houd het batterijniveau van je apparaat eenvoudig in de gaten via je toolbar.
 • Very Practical Clock & Notepad — een klok, alarmen en een uitgebreider
   multi-tab notitieblok.
 • NewTab Startpage Organizer Dashboard — maak van elk nieuw tabblad een
