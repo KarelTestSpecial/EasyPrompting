@@ -1,0 +1,286 @@
+// Easy Prompting — pad logic.
+// Data model mirrors the trusted "Clock & Notepad" notepad: an array of
+// { id, title, content } plus an activeNoteId, autosaved to chrome.storage.local.
+// Everything clock-related is gone; copy / counter / size controls are added.
+
+const DEFAULTS = {
+    notes: null,            // filled in on load with a localized title
+    activeNoteId: null,
+    fontSize: 1.0           // em
+};
+
+let notes = [];
+let activeNoteId = null;
+
+// --- DOM refs ---
+let padArea, tabsList, addTabBtn, copyBtn, clearBtn, counterEl;
+let fontSmaller, fontBigger, helpBtn, statusEl;
+let helpModal, helpClose;
+let statusTimeout = null;
+
+const t = (key, subs) => chrome.i18n.getMessage(key, subs) || key;
+
+document.addEventListener('DOMContentLoaded', init);
+
+async function init() {
+    cacheDom();
+    localizeStatic();
+    await loadState();
+    renderTabs();
+    loadActiveIntoPad();
+    applyFontSize();
+    updateCounter();
+    wireEvents();
+    padArea.focus();
+}
+
+function cacheDom() {
+    padArea = document.getElementById('pad-area');
+    tabsList = document.getElementById('tabs-list');
+    addTabBtn = document.getElementById('add-tab-btn');
+    copyBtn = document.getElementById('copy-btn');
+    clearBtn = document.getElementById('clear-btn');
+    counterEl = document.getElementById('counter');
+    fontSmaller = document.getElementById('font-smaller');
+    fontBigger = document.getElementById('font-bigger');
+    helpBtn = document.getElementById('help-btn');
+    statusEl = document.getElementById('status-message');
+    helpModal = document.getElementById('help-modal');
+    helpClose = document.getElementById('help-close');
+}
+
+function localizeStatic() {
+    document.title = t('htmlPageTitle');
+    padArea.placeholder = t('padPlaceholder');
+    copyBtn.textContent = t('copyButton');
+    copyBtn.title = t('copyButtonTooltip');
+    clearBtn.textContent = t('clearButton');
+    clearBtn.title = t('clearButtonTooltip');
+    addTabBtn.title = t('addTabTooltip');
+    fontSmaller.title = t('fontSizeTooltip');
+    fontBigger.title = t('fontSizeTooltip');
+    helpBtn.title = t('helpButtonTooltip');
+
+    document.getElementById('help-title').textContent = t('helpModalTitle');
+    document.getElementById('hd-er').textContent = t('helpDescAltER');
+    document.getElementById('hd-19').textContent = t('helpDescAlt19');
+    document.getElementById('hd-arrows').textContent = t('helpDescArrows');
+    document.getElementById('help-tip').textContent = t('helpTipText');
+    document.getElementById('rename-hint').textContent = t('renameHint');
+    document.getElementById('sibling-note').textContent = t('siblingNote');
+}
+
+async function loadState() {
+    const stored = await chrome.storage.local.get(DEFAULTS);
+    notes = Array.isArray(stored.notes) ? stored.notes : null;
+    activeNoteId = stored.activeNoteId;
+
+    if (!notes || notes.length === 0) {
+        notes = [{ id: 'default', title: t('defaultTabTitle'), content: '' }];
+        activeNoteId = 'default';
+        await persist();
+    }
+    if (!notes.find(n => n.id === activeNoteId)) {
+        activeNoteId = notes[0].id;
+    }
+
+    DEFAULTS.fontSize = stored.fontSize || 1.0;
+}
+
+async function persist() {
+    try {
+        await chrome.storage.local.set({ notes, activeNoteId });
+    } catch (e) {
+        showStatus(t('errorStorageFull'));
+    }
+}
+
+// --- Tabs ---
+function renderTabs() {
+    tabsList.innerHTML = '';
+    notes.forEach(note => {
+        const tab = document.createElement('div');
+        tab.className = `tab${note.id === activeNoteId ? ' active' : ''}`;
+        tab.dataset.id = note.id;
+
+        const title = document.createElement('span');
+        title.className = 'tab-title';
+        title.textContent = note.title || t('newTabTitle');
+        tab.appendChild(title);
+
+        const del = document.createElement('span');
+        del.className = 'delete-tab';
+        del.innerHTML = '&times;';
+        del.title = t('deleteTabTooltip');
+        del.onclick = (e) => { e.stopPropagation(); deleteTab(note.id); };
+        tab.appendChild(del);
+
+        tab.onclick = () => switchTab(note.id);
+        tab.ondblclick = () => renameTab(note.id);
+        tabsList.appendChild(tab);
+    });
+}
+
+function loadActiveIntoPad() {
+    const note = notes.find(n => n.id === activeNoteId);
+    padArea.value = note ? note.content : '';
+}
+
+function syncActiveFromPad() {
+    const note = notes.find(n => n.id === activeNoteId);
+    if (note) note.content = padArea.value;
+}
+
+async function switchTab(id) {
+    if (id === activeNoteId) return;
+    syncActiveFromPad();
+    activeNoteId = id;
+    loadActiveIntoPad();
+    renderTabs();
+    updateCounter();
+    await persist();
+    padArea.focus();
+    padArea.setSelectionRange(padArea.value.length, padArea.value.length);
+}
+
+async function addTab() {
+    syncActiveFromPad();
+    const id = Date.now().toString();
+    notes.push({ id, title: `${t('newTabTitle')} ${notes.length + 1}`, content: '' });
+    activeNoteId = id;
+    loadActiveIntoPad();
+    renderTabs();
+    updateCounter();
+    await persist();
+    padArea.focus();
+}
+
+async function deleteTab(id) {
+    if (notes.length <= 1) {
+        showStatus(t('errorCannotDeleteLastTab'));
+        return;
+    }
+    if (!confirm(t('confirmDeleteTab'))) return;
+    notes = notes.filter(n => n.id !== id);
+    if (activeNoteId === id) {
+        activeNoteId = notes[0].id;
+        loadActiveIntoPad();
+    }
+    renderTabs();
+    updateCounter();
+    await persist();
+}
+
+function renameTab(id) {
+    const note = notes.find(n => n.id === id);
+    if (!note) return;
+    const title = prompt(t('promptRenameTab'), note.title);
+    if (title !== null && title.trim() !== '') {
+        note.title = title.trim();
+        renderTabs();
+        persist();
+    }
+}
+
+// --- Autosave ---
+async function onInput() {
+    syncActiveFromPad();
+    updateCounter();
+    await persist();
+}
+
+// --- Copy / Clear ---
+async function copyCurrent() {
+    try {
+        await navigator.clipboard.writeText(padArea.value);
+        showStatus(t('copiedStatus'));
+    } catch (e) {
+        // Fallback for environments without async clipboard.
+        padArea.select();
+        document.execCommand('copy');
+        padArea.setSelectionRange(padArea.value.length, padArea.value.length);
+        showStatus(t('copiedStatus'));
+    }
+    padArea.focus();
+}
+
+async function clearCurrent() {
+    if (!padArea.value) return;
+    if (!confirm(t('confirmClear'))) return;
+    padArea.value = '';
+    syncActiveFromPad();
+    updateCounter();
+    await persist();
+    padArea.focus();
+}
+
+// --- Counter ---
+function updateCounter() {
+    const text = padArea.value;
+    const chars = text.length;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    counterEl.textContent = t('counterLabel', [String(words), String(chars)]);
+}
+
+// --- Font size ---
+function applyFontSize() {
+    padArea.style.fontSize = `${DEFAULTS.fontSize}em`;
+}
+async function changeFont(delta) {
+    DEFAULTS.fontSize = Math.min(2.5, Math.max(0.7, +(DEFAULTS.fontSize + delta).toFixed(2)));
+    applyFontSize();
+    await chrome.storage.local.set({ fontSize: DEFAULTS.fontSize });
+}
+
+// --- Status toast ---
+function showStatus(msg) {
+    if (statusTimeout) clearTimeout(statusTimeout);
+    statusEl.textContent = msg;
+    statusEl.classList.add('visible');
+    statusTimeout = setTimeout(() => statusEl.classList.remove('visible'), 1800);
+}
+
+// --- Keyboard tab navigation (Alt+E/R, Alt+1-9, Alt+arrows, Ctrl+[ ]) ---
+function onKeyDown(e) {
+    if (!notes || notes.length <= 1) return;
+    const idx = notes.findIndex(n => n.id === activeNoteId);
+    if (idx === -1) return;
+    let next = -1;
+
+    if (e.altKey && ['e', 'r'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+        next = e.key.toLowerCase() === 'e'
+            ? (idx - 1 + notes.length) % notes.length
+            : (idx + 1) % notes.length;
+    } else if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        next = e.key === 'ArrowLeft'
+            ? (idx - 1 + notes.length) % notes.length
+            : (idx + 1) % notes.length;
+    } else if (e.ctrlKey && (e.key === '[' || e.key === ']')) {
+        e.preventDefault();
+        next = e.key === '['
+            ? (idx - 1 + notes.length) % notes.length
+            : (idx + 1) % notes.length;
+    } else if (e.altKey && e.key >= '1' && e.key <= '9') {
+        const target = parseInt(e.key, 10) - 1;
+        if (target < notes.length) { e.preventDefault(); next = target; }
+    }
+
+    if (next !== -1) switchTab(notes[next].id);
+}
+
+function wireEvents() {
+    padArea.addEventListener('input', onInput);
+    padArea.addEventListener('keydown', onKeyDown);
+    addTabBtn.addEventListener('click', addTab);
+    copyBtn.addEventListener('click', copyCurrent);
+    clearBtn.addEventListener('click', clearCurrent);
+    fontSmaller.addEventListener('click', () => changeFont(-0.1));
+    fontBigger.addEventListener('click', () => changeFont(0.1));
+    helpBtn.addEventListener('click', () => helpModal.classList.remove('hidden'));
+    helpClose.addEventListener('click', () => helpModal.classList.add('hidden'));
+    helpModal.addEventListener('click', (e) => {
+        if (e.target === helpModal) helpModal.classList.add('hidden');
+    });
+}

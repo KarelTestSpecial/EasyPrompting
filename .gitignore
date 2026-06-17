@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Local test scaffolding (regenerated when needed)
+easyprompting/_test_harness.html
