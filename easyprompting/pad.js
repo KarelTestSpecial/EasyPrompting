@@ -18,7 +18,8 @@ let fontSmaller, fontBigger, helpBtn, statusEl;
 let helpModal, helpClose;
 let statusTimeout = null;
 
-// Removed t() functiondocument.addEventListener('DOMContentLoaded', init);
+// Removed t() function
+document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
     cacheDom();
